@@ -1,0 +1,591 @@
+
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Practice Test</title>
+
+<style>
+
+*{box-sizing:border-box;}
+
+body{
+font-family:"Inter","Segoe UI",Arial;
+margin:0;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:linear-gradient(135deg,#4f8cff,#7c3aed);
+transition:0.4s;
+}
+
+/* DARK BACKGROUND */
+
+body.dark{
+background:linear-gradient(135deg,#0f172a,#020617);
+}
+
+.container{
+position:relative;
+width:520px;
+background:rgba(255,255,255,0.95);
+padding:35px;
+border-radius:18px;
+box-shadow:0 25px 60px rgba(0,0,0,0.2);
+transition:0.3s;
+}
+
+/* DARK CONTAINER */
+
+body.dark .container{
+background:#1e293b;
+color:#e2e8f0;
+}
+
+/* INPUTS */
+
+input,select{
+width:100%;
+padding:12px;
+margin-top:10px;
+margin-bottom:15px;
+border-radius:8px;
+border:1px solid #ddd;
+}
+
+body.dark input,
+body.dark select{
+background:#334155;
+color:white;
+border:1px solid #475569;
+}
+
+/* BUTTON */
+
+button{
+width:100%;
+padding:14px;
+background:linear-gradient(90deg,#4f8cff,#7c3aed);
+border:none;
+border-radius:8px;
+color:white;
+font-size:16px;
+font-weight:600;
+cursor:pointer;
+}
+
+body.dark button{
+background:linear-gradient(90deg,#6366f1,#9333ea);
+}
+
+.hidden{display:none;}
+
+.questionCard{
+background:#f9fbff;
+border-radius:10px;
+padding:18px;
+margin-bottom:15px;
+}
+
+body.dark .questionCard{
+background:#1e293b;
+border:1px solid #334155;
+}
+
+.progressBar{
+width:100%;
+height:8px;
+background:#eee;
+border-radius:10px;
+overflow:hidden;
+margin-bottom:15px;
+}
+
+body.dark .progressBar{
+background:#334155;
+}
+
+.progressFill{
+height:100%;
+background:linear-gradient(90deg,#4f8cff,#7c3aed);
+width:0%;
+}
+
+.timer{
+display:inline-block;
+background:#ffe8e8;
+color:#d90000;
+padding:6px 10px;
+border-radius:20px;
+font-weight:600;
+font-size:13px;
+margin-bottom:10px;
+}
+
+.summaryBox{
+border:1px solid #ddd;
+padding:15px;
+margin-bottom:10px;
+border-radius:8px;
+}
+
+body.dark .summaryBox{
+background:#1e293b;
+border:1px solid #334155;
+}
+
+.correct{color:green;font-weight:bold;}
+.wrong{color:red;font-weight:bold;}
+
+/* THEME ICON */
+
+.themeToggle{
+position:absolute;
+top:15px;
+right:20px;
+font-size:20px;
+cursor:pointer;
+background:rgba(255,255,255,0.2);
+padding:6px 10px;
+border-radius:50%;
+backdrop-filter:blur(6px);
+transition:0.3s;
+}
+
+.themeToggle:hover{
+transform:scale(1.1);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="themeToggle" onclick="toggleTheme()">🌙</div>
+
+<div id="startScreen">
+
+<h2>Practice Test</h2>
+
+<input id="studentName" placeholder="Enter your name">
+
+<select id="subject" onchange="loadTopics()">
+<option value="">Select Course</option>
+</select>
+
+<select id="topic">
+<option value="">Select Topic</option>
+</select>
+
+<button onclick="startTest()">Start Practice</button>
+
+</div>
+
+<div id="testScreen" class="hidden">
+
+<div class="progressBar">
+<div class="progressFill" id="progressFill"></div>
+</div>
+
+<h3 id="questionTitle"></h3>
+
+<div class="questionCard">
+<p id="questionText"></p>
+</div>
+
+<div class="timer">
+⏱ Time Remaining: <span id="time">60</span>s
+</div>
+
+<select id="debit">
+<option value="">Select Debit Account</option>
+</select>
+
+<select id="credit">
+<option value="">Select Credit Account</option>
+</select>
+
+<input id="amount" placeholder="Amount">
+
+<button onclick="submitAnswer()">Submit Answer</button>
+
+</div>
+
+<div id="resultScreen" class="hidden">
+
+<h2>Test Completed</h2>
+
+<h1 id="finalScore"></h1>
+
+<div id="summaryContent"></div>
+
+<button onclick="location.reload()">Try Again</button>
+
+</div>
+
+</div>
+
+<script>
+
+let allQuestions = [];
+let questions = [];
+let accountPool = [];
+let answerLog = [];
+
+let currentQuestion=0;
+let score=0;
+let student="";
+let subject="";
+let topic="";
+let timer;
+let timeLeft=60;
+
+/* LOAD QUESTIONS */
+
+fetch("https://script.google.com/macros/s/AKfycbzPqO5hxro5bTLEeSzNt3vZ2N3RY3fuY3JW1j9OlOkVHTBGcJ1PLIKjr9EnIBPeeARswQ/exec")
+.then(res => res.json())
+.then(data => {
+
+allQuestions = data;
+
+buildAccountPool();
+
+loadSubjects();
+
+});
+
+function buildAccountPool(){
+
+let accounts = new Set();
+
+allQuestions.forEach(q => {
+
+accounts.add(q.debit);
+accounts.add(q.credit);
+
+});
+
+accountPool = [...accounts];
+
+}
+
+function loadSubjects(){
+
+let subjects = [...new Set(allQuestions.map(q => q.subject))];
+
+let subjectSelect = document.getElementById("subject");
+
+subjects.forEach(sub => {
+
+let option = document.createElement("option");
+option.value = sub;
+option.text = sub;
+
+subjectSelect.appendChild(option);
+
+});
+
+}
+
+function loadTopics(){
+
+let selectedSubject = document.getElementById("subject").value;
+
+let topics = [...new Set(
+allQuestions
+.filter(q => q.subject === selectedSubject)
+.map(q => q.topic)
+)];
+
+let topicSelect = document.getElementById("topic");
+
+topicSelect.innerHTML = '<option value="">Select Topic</option>';
+
+topics.forEach(t => {
+
+let option = document.createElement("option");
+option.value = t;
+option.text = t;
+
+topicSelect.appendChild(option);
+
+});
+
+}
+
+function startTest(){
+
+student=document.getElementById("studentName").value;
+subject=document.getElementById("subject").value;
+topic=document.getElementById("topic").value;
+
+if(student=="" || subject=="" || topic==""){
+alert("Please fill all fields");
+return;
+}
+
+let filteredQuestions = allQuestions.filter(q =>
+q.subject === subject && q.topic === topic
+);
+
+questions = shuffle(filteredQuestions).slice(0,10);
+
+currentQuestion=0;
+score=0;
+answerLog=[];
+
+document.getElementById("startScreen").classList.add("hidden");
+document.getElementById("testScreen").classList.remove("hidden");
+
+loadQuestion();
+
+}
+
+function loadQuestion(){
+
+let q=questions[currentQuestion];
+
+document.getElementById("questionTitle").innerText =
+"Question "+(currentQuestion+1)+" of "+questions.length;
+
+document.getElementById("questionText").innerText=q.question;
+
+let options = generateOptions(q.debit, q.credit);
+
+populateDropdown("debit", options);
+populateDropdown("credit", options);
+
+document.getElementById("amount").value="";
+
+timeLeft=60;
+document.getElementById("time").innerText=timeLeft;
+
+let progress = ((currentQuestion)/questions.length)*100;
+document.getElementById("progressFill").style.width = progress+"%";
+
+timer=setInterval(countdown,1000);
+
+}
+
+function generateOptions(debitCorrect, creditCorrect){
+
+let options = new Set();
+
+options.add(debitCorrect);
+options.add(creditCorrect);
+
+while(options.size < 4){
+
+let randomAccount =
+accountPool[Math.floor(Math.random()*accountPool.length)];
+
+options.add(randomAccount);
+
+}
+
+return shuffle([...options]);
+
+}
+
+function populateDropdown(id, options){
+
+let select = document.getElementById(id);
+
+select.innerHTML = '<option value="">Select</option>';
+
+options.forEach(opt => {
+
+let option = document.createElement("option");
+
+option.value = opt;
+option.text = opt;
+
+select.appendChild(option);
+
+});
+
+}
+
+function shuffle(array){
+
+for(let i = array.length-1;i>0;i--){
+
+let j = Math.floor(Math.random()*(i+1));
+
+[array[i],array[j]]=[array[j],array[i]];
+
+}
+
+return array;
+
+}
+
+function countdown(){
+
+timeLeft--;
+
+document.getElementById("time").innerText=timeLeft;
+
+if(timeLeft<=0){
+submitAnswer();
+}
+
+}
+
+function submitAnswer(){
+
+clearInterval(timer);
+
+let debit=document.getElementById("debit").value.trim();
+let credit=document.getElementById("credit").value.trim();
+let amount=document.getElementById("amount").value.trim();
+
+let q=questions[currentQuestion];
+
+answerLog.push({
+
+question:q.question,
+
+studentDebit:debit,
+studentCredit:credit,
+studentAmount:amount,
+
+correctDebit:q.debit,
+correctCredit:q.credit,
+correctAmount:q.amount,
+
+explanation:q.explanation
+
+});
+
+if(
+debit.toLowerCase()==q.debit.toLowerCase() &&
+credit.toLowerCase()==q.credit.toLowerCase() &&
+amount==q.amount
+){
+score++;
+}
+
+currentQuestion++;
+
+if(currentQuestion<questions.length){
+loadQuestion();
+}else{
+finishTest();
+}
+
+}
+
+function finishTest(){
+
+document.getElementById("testScreen").classList.add("hidden");
+document.getElementById("resultScreen").classList.remove("hidden");
+
+document.getElementById("finalScore").innerText =
+score+" / "+questions.length;
+
+generateSummary();
+
+sendResult();
+
+}
+
+function generateSummary(){
+
+let container = document.getElementById("summaryContent");
+
+container.innerHTML = "";
+
+answerLog.forEach((a,index)=>{
+
+let correct =
+a.studentDebit.toLowerCase()==a.correctDebit.toLowerCase() &&
+a.studentCredit.toLowerCase()==a.correctCredit.toLowerCase() &&
+a.studentAmount==a.correctAmount;
+
+let resultClass = correct ? "correct" : "wrong";
+let resultText = correct ? "Correct" : "Wrong";
+
+container.innerHTML += `
+
+<div class="summaryBox">
+
+<b>Question ${index+1}</b><br>
+${a.question}<br><br>
+
+<b>Your Answer</b><br>
+Debit: ${a.studentDebit}<br>
+Credit: ${a.studentCredit}<br>
+Amount: ${a.studentAmount}<br><br>
+
+<b>Correct Answer</b><br>
+Debit: ${a.correctDebit}<br>
+Credit: ${a.correctCredit}<br>
+Amount: ${a.correctAmount}<br><br>
+
+<b>Explanation</b><br>
+${a.explanation}<br><br>
+
+<span class="${resultClass}">${resultText}</span>
+
+</div>
+
+`;
+
+});
+
+}
+
+function sendResult(){
+
+fetch("https://script.google.com/macros/s/AKfycbyUNn0MkfkG1EQ-X2-IvK8utw8RM7BmYr5o7NEsn2AYAxsARzrRJ_LDBJ3VcUFDe83BfQ/exec",{
+
+method:"POST",
+
+body:JSON.stringify({
+
+student:student,
+subject:subject,
+topic:topic,
+score:score,
+total:questions.length,
+time:"completed"
+
+})
+
+})
+
+}
+
+/* THEME TOGGLE */
+
+function toggleTheme(){
+
+document.body.classList.toggle("dark");
+
+let icon = document.querySelector(".themeToggle");
+
+if(document.body.classList.contains("dark")){
+icon.innerHTML="☀️";
+localStorage.setItem("theme","dark");
+}else{
+icon.innerHTML="🌙";
+localStorage.setItem("theme","light");
+}
+
+}
+
+if(localStorage.getItem("theme")=="dark"){
+document.body.classList.add("dark");
+document.querySelector(".themeToggle").innerHTML="☀️";
+}
+
+</script>
+
+</body>
+</html>
